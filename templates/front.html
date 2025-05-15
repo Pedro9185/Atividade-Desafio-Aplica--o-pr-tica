@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Classificador de Flores com KNN</title>
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      margin: 20px;
+      background-color: #272727;
+      text-align: center;
+    }
+
+    .logo-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    h1,
+    h2 {
+      color: #ffffff;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 10px 0;
+      border: none;
+      cursor: pointer;
+      background-color: #8000f8;
+      color: white;
+      border-radius: 4px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    button:hover {
+      opacity: 0.8;
+    }
+
+    #testResults {
+      margin-top: 20px;
+      background: white;
+      padding: 15px;
+      border-radius: 4px;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+      display: none;
+      margin-left: auto;
+      margin-right: auto;
+      max-width: 800px;
+    }
+
+    #metrics p {
+      margin: 5px 0;
+    }
+
+    .form-group {
+      margin-bottom: 10px;
+    }
+
+    input[type="number"] {
+      padding: 5px;
+      width: 200px;
+      height: 35px;
+      margin: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    #resultadoPredict {
+      margin-top: 15px;
+      padding: 10px;
+      background: #e0ffe0;
+      border: 1px solid #00cc00;
+      border-radius: 4px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #006600;
+      display: none;
+    }
+
+    .graph {
+      margin-top: 15px;
+      max-width: 400px;
+    }
+
+    /* Spinner CSS */
+    #loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 4px solid #007BFF;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Container dos resultados, inicialmente oculto */
+    #resultsContent {
+      display: none;
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <!-- Logo da UFCA no topo -->
+  <div class="logo-container">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8e/Logomarca_UFCA.svg" alt="Logo UFCA" width="200">
+  </div>
+
+  <h1>Classificador de Flores com KNN</h1>
+  <div>
+    <button id="btnTreinar" onclick="treinar()">Treino</button>
+    <button id="btnTestar" onclick="testar()">Teste</button>
+  </div>
+  <div>
+    <h2>Teste Novo Valor</h2>
+    <form id="formPredict">
+      <div class="form-group">
+        <input type="number" step="any" name="sepal_length" placeholder="Comprimento da Sépala (cm)" required>
+        <input type="number" step="any" name="sepal_width" placeholder="Largura da Sépala (cm)" required>
+      </div>
+      <div class="form-group">
+        <input type="number" step="any" name="petal_length" placeholder="Comprimento da Pétala (cm)" required>
+        <input type="number" step="any" name="petal_width" placeholder="Largura da Pétala (cm)" required>
+      </div>
+      <button type="submit">Enviar Valores</button>
+    </form>
+    <div id="resultadoPredict">Resultado da Predição: </div>
+  </div>
+
+  <div id="testResults">
+    <div id="modelTabs" class="nav nav-tabs"></div>
+    <div id="modelContents" class="tab-content"></div>
+    <h2>Resultados do Teste</h2>
+    <div id="loading">
+      <div class="spinner"></div>
+      <span>Carregando resultados...</span>
+    </div>
+    <div id="resultsContent">
+      <div id="metrics"></div>
+      <div>
+        <h3>Matriz de Confusão</h3>
+        <img id="cmImage" class="graph" src="" alt="Matriz de Confusão">
+      </div>
+      <div>
+        <h3>Superfície de Decisão</h3>
+        <img id="dsImage" class="graph" src="" alt="Superfície de Decisão">
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function treinar() {
+      document.getElementById('btnTreinar').disabled = true;
+      document.getElementById('btnTreinar').innerText = "Treinando...";
+
+      fetch('/train', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+        .then(response => response.json())
+        .then(data => {
+          alert(data.message);
+          document.getElementById('btnTreinar').style.backgroundColor = "green";
+          document.getElementById('btnTreinar').innerText = "Treinamento Concluído";
+          document.getElementById('btnTreinar').disabled = false;
+          document.getElementById('btnTestar').disabled = false;
+        })
+        .catch(error => {
+          console.error('Erro:', error);
+          document.getElementById('btnTreinar').innerText = "Treinar Modelos";
+          document.getElementById('btnTreinar').disabled = false;
+          alert("Erro durante o treinamento: " + error.message);
+        });
+    }
+
+    function testar() {
+      const testResultsDiv = document.getElementById('testResults');
+      testResultsDiv.style.display = "block";
+      document.getElementById('loading').style.display = "flex";
+      document.getElementById('resultsContent').style.display = "none";
+      document.getElementById('modelTabs').innerHTML = '';
+      document.getElementById('modelContents').innerHTML = '';
+
+      fetch('/test')
+        .then(response => response.json())
+        .then(data => {
+          // Esconde o loading e mostra os resultados
+          document.getElementById('loading').style.display = "none";
+          document.getElementById('resultsContent').style.display = "block";
+
+          // Processa os resultados para cada modelo
+          const models = Object.keys(data.results);
+
+          // Cria as abas para cada modelo
+          const modelTabs = document.getElementById('modelTabs');
+          const modelContents = document.getElementById('modelContents');
+
+          // Adiciona o gráfico comparativo primeiro
+          modelContents.innerHTML += `
+                <div class="tab-content" id="comparison">
+                    <h2>Comparação entre Modelos</h2>
+                    <img src="data:image/png;base64,${data.plots.comparison}" style="max-width: 100%;">
+                </div>
+            `;
+
+          // Para cada modelo, cria uma aba e seu conteúdo
+          models.forEach((modelName, index) => {
+            const isActive = index === 0 ? 'active' : '';
+            const show = index === 0 ? 'show active' : '';
+
+            // Adiciona a aba
+            modelTabs.innerHTML += `
+                    <li class="nav-item">
+                        <a class="nav-link ${isActive}" data-toggle="tab" href="#${modelName.replace(' ', '')}">
+                            ${modelName}
+                        </a>
+                    </li>
+                `;
+
+            // Obtém os dados do modelo atual
+            const modelData = data.results[modelName];
+            const modelPlots = data.plots[modelName];
+
+            // Adiciona o conteúdo da aba
+            modelContents.innerHTML += `
+                    <div class="tab-pane fade ${show}" id="${modelName.replace(' ', '')}">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h3>Métricas de Treinamento</h3>
+                                <table class="table table-bordered">
+                                    <tr><th>Acurácia</th><td>${(modelData.train_metrics.accuracy * 100).toFixed(1)}%</td></tr>
+                                    <tr><th>Precisão</th><td>${(modelData.train_metrics.precision * 100).toFixed(1)}%</td></tr>
+                                    <tr><th>Recall</th><td>${(modelData.train_metrics.recall * 100).toFixed(1)}%</td></tr>
+                                </table>
+                                
+                                <h3>Métricas de Teste</h3>
+                                <table class="table table-bordered">
+                                    <tr><th>Acurácia</th><td>${(modelData.test_metrics.accuracy * 100).toFixed(1)}%</td></tr>
+                                    <tr><th>Precisão</th><td>${(modelData.test_metrics.precision * 100).toFixed(1)}%</td></tr>
+                                    <tr><th>Recall</th><td>${(modelData.test_metrics.recall * 100).toFixed(1)}%</td></tr>
+                                </table>
+                                
+                                <h3>Relatório de Classificação</h3>
+                                <pre>${formatClassificationReport(modelData.classification_report)}</pre>
+                            </div>
+                            <div class="col-md-6">
+                                <h3>Matriz de Confusão</h3>
+                                <img src="data:image/png;base64,${modelPlots.confusion_matrix}" style="max-width: 100%;">
+                                
+                                <h3>Superfície de Decisão</h3>
+                                <img src="data:image/png;base64,${modelPlots.decision_surface}" style="max-width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+                `;
+          });
+        })
+        .catch(error => {
+          console.error('Erro:', error);
+          document.getElementById('loading').innerHTML = `
+                <div class="alert alert-danger">
+                    Erro ao carregar resultados: ${error.message}
+                </div>
+            `;
+        });
+    }
+
+    // Função para formatar o relatório de classificação
+    function formatClassificationReport(report) {
+      let result = '';
+      const classes = Object.keys(report).filter(key => key.length === 1); // Filtra apenas as classes
+
+      // Cabeçalho
+      result += '              precision    recall  f1-score   support\n\n';
+
+      // Métricas por classe
+      classes.forEach(cls => {
+        result += `${cls.padEnd(15)}${report[cls].precision.toFixed(2).padStart(8)}${report[cls].recall.toFixed(2).padStart(8)}`;
+        result += `${report[cls]['f1-score'].toFixed(2).padStart(8)}${report[cls].support.toString().padStart(8)}\n`;
+      });
+
+      // Métricas agregadas
+      result += `\naccuracy${' '.repeat(11)}${report.accuracy.toFixed(2).padStart(8)}`;
+      result += `${' '.repeat(8)}${report['macro avg'].support.toString().padStart(8)}\n`;
+
+      result += `macro avg${' '.repeat(8)}${report['macro avg'].precision.toFixed(2).padStart(8)}`;
+      result += `${report['macro avg'].recall.toFixed(2).padStart(8)}`;
+      result += `${report['macro avg']['f1-score'].toFixed(2).padStart(8)}`;
+      result += `${report['macro avg'].support.toString().padStart(8)}\n`;
+
+      result += `weighted avg${' '.repeat(4)}${report['weighted avg'].precision.toFixed(2).padStart(8)}`;
+      result += `${report['weighted avg'].recall.toFixed(2).padStart(8)}`;
+      result += `${report['weighted avg']['f1-score'].toFixed(2).padStart(8)}`;
+      result += `${report['weighted avg'].support.toString().padStart(8)}\n`;
+
+      return result;
+    }
+
+    document.getElementById('formPredict').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const data = {
+        sepal_length: parseFloat(formData.get('sepal_length')),
+        sepal_width: parseFloat(formData.get('sepal_width')),
+        petal_length: parseFloat(formData.get('petal_length')),
+        petal_width: parseFloat(formData.get('petal_width'))
+      };
+
+      const resultadoDiv = document.getElementById('resultadoPredict');
+      resultadoDiv.innerHTML = '<p>Processando...</p>';
+      resultadoDiv.style.display = "block";
+
+      fetch('/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+        .then(response => response.json())
+        .then(result => {
+          let html = '<h3>Resultados da Predição</h3>';
+
+          for (const [modelName, prediction] of Object.entries(result.predictions)) {
+            html += `
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h4>${modelName}</h4>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Classe predita:</strong> ${prediction.prediction} (${prediction.confidence} de confiança)</p>
+                            <p><strong>Probabilidades:</strong></p>
+                            <ul>
+                                ${Object.entries(prediction.probabilities).map(([cls, prob]) =>
+              `<li>${cls}: ${prob}%</li>`
+            ).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+          }
+
+          resultadoDiv.innerHTML = html;
+        })
+        .catch(error => {
+          console.error('Erro:', error);
+          resultadoDiv.innerHTML = `<div class="alert alert-danger">Erro na predição: ${error.message}</div>`;
+        });
+    });
+  </script>
+</body>
+
+</html>
