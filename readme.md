@@ -1,4 +1,6 @@
 # ATIVIDADE DESAFIO APLICAÇÃO PRATICA 
+## Universidade Federal do Cariri
+## Professor: Luís Fabrício de Freitas Sousa
 ## Curso: Análise e Desenvolvimento de Sistemas
 ## Disciplina: Aprendizagem de Maquina
 ## Aluno: Pedro Henrique Catarina Nogueira | Matricula: 	2023010244
